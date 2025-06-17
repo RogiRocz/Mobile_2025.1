@@ -11,7 +11,7 @@ data class Animal(val id: Int,
                   val curiosities: String,
                   var isFavorite: Boolean = false)
 
-val AnimalList = listOf(
+val animalList = listOf(
     Animal(
         id = 1,
         name = "Leão",
