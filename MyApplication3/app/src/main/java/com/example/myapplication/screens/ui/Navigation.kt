@@ -1,12 +1,12 @@
-package com.ufc.quixada.nutrilivre.navigation
+package com.example.myapplication.screens.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.ufc.quixada.nutrilivre.ui.screens.*
 
 sealed class AppScreens(val route: String) {
     object TelaInicialScreen : AppScreens("tela_inicial")
@@ -48,4 +48,10 @@ fun AppNavigation() {
             AjudaScreen(navController = navController)
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AppNavigationPreview(){
+    AppNavigation()
 }
