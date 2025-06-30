@@ -1,4 +1,4 @@
-package com.ufc.quixada.nutrilivre.data
+package com.example.myapplication.model
 
 data class Receita(
     val id: Int,

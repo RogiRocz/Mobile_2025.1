@@ -1,4 +1,4 @@
-package com.example.myapplication // Certifique-se de que este corresponde ao seu namespace
+package com.example.myapplication
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -7,19 +7,19 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
-import com.example.myapplication.navigation.AppNavigation // Ajuste o caminho para navigation
-import com.example.myapplication.ui.theme.MyApplicationTheme // Ajuste para o tema do seu projeto
+import com.example.myapplication.screens.ui.AppNavigation
+import com.example.myapplication.ui.theme.MyApplicationTheme
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            MyApplicationTheme { // Use o tema do seu projeto
+            MyApplicationTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    AppNavigation() // Chama a função de navegação
+                    AppNavigation()
                 }
             }
         }
