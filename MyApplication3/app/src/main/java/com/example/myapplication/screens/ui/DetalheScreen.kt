@@ -1,44 +1,112 @@
 package com.example.myapplication.screens.ui
 
+import android.content.Context
+import android.speech.tts.TextToSpeech
+import android.speech.tts.TextToSpeech.OnInitListener
+import android.widget.Toast
+import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavHostController
 import coil.compose.AsyncImage
 import com.example.myapplication.model.DadosMockados
+import com.example.myapplication.model.Receita
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetalheScreen(navController: NavHostController, receitaId: Int?) {
     val receita = remember { DadosMockados.listaDeReceitas.find { it.id == receitaId } }
     var isFavorite by remember { mutableStateOf(receita?.isFavorita ?: false) }
+    var expandedMenu by remember { mutableStateOf(false) }
+    val scrollState = rememberScrollState()
+    var textToSpeech: TextToSpeech? by remember { mutableStateOf(null) }
+    var isTtsReady by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    DisposableEffect(Unit) {
+        val listener = OnInitListener { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val result = textToSpeech?.setLanguage(Locale("pt", "BR"))
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Toast.makeText(context, "Idioma não suportado para TTS.", Toast.LENGTH_LONG).show()
+                    isTtsReady = false
+                } else {
+                    isTtsReady = true
+                }
+            } else {
+                Toast.makeText(context, "Erro ao inicializar o Text-to-Speech.", Toast.LENGTH_LONG).show()
+                isTtsReady = false
+            }
+        }
+        textToSpeech = TextToSpeech(context, listener)
+
+        onDispose {
+            textToSpeech?.stop()
+            textToSpeech?.shutdown()
+        }
+    }
+
+    val relatedRecipes = remember(receita) {
+        receita?.let { current ->
+            getRelatedRecipes(current, DadosMockados.listaDeReceitas)
+        } ?: emptyList()
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(title = { Text(receita?.nome ?: "Detalhe") }, actions = {
                 // IconButton para o menu MoreVert (já estava correto)
-                IconButton(onClick = { /* TODO: Implementar menu */ }) {
+                IconButton(onClick = { expandedMenu = true}) {
                     Icon(Icons.Filled.MoreVert, contentDescription = "Menu")
+                }
+                DropdownMenu(expanded = expandedMenu, onDismissRequest = {expandedMenu = false}) {
+                    DropdownMenuItem(
+                        text = {Text("Compartilhar")},
+                        onClick = {
+                            // fazer lógica pra compartilhar
+                            expandedMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {Text("Adicionar a lista de compras")},
+                        onClick = {
+                            // fazer lógica pra Adicionar a lista de compras
+                            expandedMenu = false
+                        }
+                    )
+                    DropdownMenuItem(
+                        text = {Text("Reportar erro / Sugerir edição")},
+                        onClick = {
+                            // fazer lógica pra Reportar erro / Sugerir edição
+                            expandedMenu = false
+                        }
+                    )
                 }
             })
         },
         bottomBar = { BottomNavigationBar(navController = navController) }
     ) { paddingValues ->
-        // O `receita?.let` garante que o bloco interno só execute se a receita não for nula
         receita?.let { r ->
             Column(
                 modifier = Modifier
                     .padding(paddingValues)
                     .padding(16.dp)
                     .fillMaxSize()
+                    .verticalScroll(scrollState)
             ) {
                 AsyncImage(
                     model = r.imagemUrl,
@@ -48,17 +116,16 @@ fun DetalheScreen(navController: NavHostController, receitaId: Int?) {
                         .height(200.dp)
                 )
                 Spacer(modifier = Modifier.height(16.dp))
-                // Ajuste da Tipografia Material 3:
-                Text(text = r.nome, style = MaterialTheme.typography.headlineLarge) // Equivalente ao h4
+                Text(text = r.nome, style = MaterialTheme.typography.headlineLarge)
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(text = r.descricaoCurta, style = MaterialTheme.typography.bodyLarge) // Equivalente ao body1
+                Text(text = r.descricaoCurta, style = MaterialTheme.typography.bodyLarge)
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Ingredientes:", style = MaterialTheme.typography.titleLarge) // Equivalente ao h6
+                Text(text = "Ingredientes:", style = MaterialTheme.typography.titleLarge)
                 r.ingredientes.forEach { ingrediente ->
                     Text(text = "- $ingrediente")
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                Text(text = "Modo de Preparo:", style = MaterialTheme.typography.titleLarge) // Equivalente ao h6
+                Text(text = "Modo de Preparo:", style = MaterialTheme.typography.titleLarge)
                 r.modoPreparo.forEachIndexed { index, passo ->
                     Text(text = "${index + 1}. $passo")
                 }
@@ -72,55 +139,65 @@ fun DetalheScreen(navController: NavHostController, receitaId: Int?) {
                         } else {
                             DadosMockados.listaDeFavoritosMock.remove(r)
                         }
-                        // TODO: Atualizar a lista de favoritos se necessário
                     }) {
                         Icon(
-                            Icons.Filled.Favorite,
-                            contentDescription = "Favoritar",
-                            // Ajuste da Cor no Material 3:
-                            // Não existe 'MaterialTheme.colors.secondary' no MD3.
-                            // Use MaterialTheme.colorScheme.secondary ou primary.
-                            // LocalContentColor.current é uma boa opção para o não favorito.
-                            tint = if (isFavorite) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                            imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                            contentDescription = if (isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos",
+                            tint = if (isFavorite) MaterialTheme.colorScheme.surface else LocalContentColor.current
                         )
-                        Text(if (isFavorite) "Remover dos Favoritos" else "Adicionar aos Favoritos")
+                        Text(if (isFavorite) " Remover dos Favoritos" else " Adicionar aos Favoritos")
                     }
-                    // Exemplo de botão de multimídia (opcional)
+
                     Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = { /* TODO: Implementar reprodução de áudio/vídeo */ }, enabled = false) {
-                        Text("Ouvir/Ver")
+                    Button(onClick = {
+                        val ingredientesTexto = "Ingredientes: " + r.ingredientes.joinToString(separator = ". ") { it.trimStart('-').trim() } + "."
+                        val modoPreparoTexto = "Modo de preparo: " + r.modoPreparo.joinToString(separator = ". ") { it.trimStart(*"0123456789.".toCharArray()).trim() } + "."
+
+                        val textoCompleto = "$ingredientesTexto $modoPreparoTexto"
+
+                        if (isTtsReady) {
+                            textToSpeech?.speak(textoCompleto, TextToSpeech.QUEUE_FLUSH, null, "")
+                        } else {
+                            Toast.makeText(context, "Text-to-Speech não está pronto.", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                        enabled = isTtsReady
+                    ) {
+                        Text("Ouvir")
                     }
                 }
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Receitas Relacionadas:", style = MaterialTheme.typography.titleLarge) // Equivalente ao h6
-                LazyRow {
-                    items(DadosMockados.listaDeReceitas.take(3)) { relatedReceita ->
-                        Card(
-                            modifier = Modifier
-                                .width(150.dp)
-                                .padding(end = 8.dp),
-                            // elevation no MD3 é shadowElevation ou tonalElevation
-                            // shadowElevation = 2.dp, // Use esta linha se quiser uma sombra
-                            onClick = { /* TODO: Navegar para o detalhe da receita relacionada */ } // Adicione um onClick
-                        ) {
-                            Column(modifier = Modifier.padding(8.dp)) {
-                                AsyncImage(
-                                    model = relatedReceita.imagemUrl,
-                                    contentDescription = relatedReceita.nome,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(80.dp)
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                // Ajuste da Tipografia Material 3:
-                                Text(relatedReceita.nome, style = MaterialTheme.typography.labelSmall) // Equivalente ao caption
+                if (relatedRecipes.isNotEmpty()) {
+                    Text("Receitas Relacionadas:", style = MaterialTheme.typography.titleLarge)
+                    LazyRow {
+                        items(relatedRecipes) { relatedReceita ->
+                            Card(
+                                modifier = Modifier
+                                    .width(150.dp)
+                                    .padding(end = 8.dp),
+                                onClick = {
+                                    navController.navigate(AppScreens.DetalheScreen.createRoute(relatedReceita.id))
+                                }
+                            ) {
+                                Column(modifier = Modifier.padding(8.dp)) {
+                                    AsyncImage(
+                                        model = relatedReceita.imagemUrl,
+                                        contentDescription = relatedReceita.nome,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(80.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(relatedReceita.nome, style = MaterialTheme.typography.labelSmall)
+                                }
                             }
                         }
                     }
+                } else {
+                    Text("Não há receitas relacionadas disponíveis.", style = MaterialTheme.typography.labelSmall)
                 }
             }
         } ?: run {
-            // Este `Box` centraliza a mensagem de "Receita não encontrada"
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -132,4 +209,38 @@ fun DetalheScreen(navController: NavHostController, receitaId: Int?) {
             }
         }
     }
+}
+
+fun getRelatedRecipes(currentRecipe: Receita, allRecipes: List<Receita>): List<Receita> {
+    val otherRecipes = allRecipes.filter { it.id != currentRecipe.id }
+
+    val currentKeywords = (currentRecipe.ingredientes.map { it.lowercase() } +
+            currentRecipe.nome.lowercase().split(" "))
+        .flatMap { it.split(" ", ",") }
+        .filter { it.isNotBlank() && it.length > 2 }
+        .toSet()
+
+    if (currentKeywords.isEmpty()) {
+        return otherRecipes.shuffled().take(3)
+    }
+
+    val relatedRecipes = mutableListOf<Pair<Receita, Int>>()
+
+    for (otherRecipe in otherRecipes) {
+        val otherKeywords = (otherRecipe.ingredientes.map { it.lowercase() } +
+                otherRecipe.nome.lowercase(Locale.ROOT).split(" "))
+            .flatMap { it.split(" ", ",") }
+            .filter { it.isNotBlank() && it.length > 2 }
+            .toSet()
+
+        val commonWordsCount = currentKeywords.intersect(otherKeywords).size
+
+        if (commonWordsCount > 0) {
+            relatedRecipes.add(Pair(otherRecipe, commonWordsCount))
+        }
+    }
+
+    return relatedRecipes.sortedByDescending { it.second }
+        .map { it.first }
+        .take(3)
 }
