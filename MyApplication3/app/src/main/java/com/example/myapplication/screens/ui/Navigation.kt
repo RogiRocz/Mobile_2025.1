@@ -1,6 +1,7 @@
 package com.example.myapplication.screens.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -47,4 +48,10 @@ fun AppNavigation() {
             AjudaScreen(navController = navController)
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AppNavigationPreview(){
+    AppNavigation()
 }
